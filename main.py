@@ -35,7 +35,7 @@ def main():
             file_info = MediaInfo.parse(join(dir, file))
             for track in file_info.tracks:
                 if track.track_type == "Video":
-                    if "E" + to_play.zfill(2) in file:
+                    if "e" + to_play.zfill(2) in file.lower():
                         print("Opening file:")
                         print(file)
                         opened = True
