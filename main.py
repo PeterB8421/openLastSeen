@@ -1,24 +1,30 @@
 import os
-from os import listdir
-from os.path import isfile, join
-from pymediainfo import MediaInfo
+from os.path import join
+import glob
 import sys
+import re
+import platform
 
 
 def main():
-    dir = os.getcwd()
+    directory = os.getcwd()
     add = False
     if len(sys.argv) > 1:
-        dir = sys.argv[1]
-    onlyfiles = [f for f in listdir(dir) if isfile(join(dir, f))]
+        directory = sys.argv[1]
+    onlyfiles = []
+    for ext in ('mkv', 'avi', 'mp4'):
+        pattern = os.path.join(glob.escape(directory), f'*.{ext}')
+        onlyfiles.extend(glob.glob(pattern))
+
     if len(sys.argv) > 2:
         if sys.argv[2] == "a":
             add = True
 
-    if not "seen.txt" in onlyfiles:
-        print("seen.txt not found!")
-        exit(1)
-    with open(join(dir, "seen.txt"), "r+") as f:
+    if not os.path.isfile(os.path.join(directory, 'seen.txt')):
+        with open(os.path.join(directory, 'seen.txt'), 'w') as f:
+            pass
+
+    with open(join(directory, "seen.txt"), "r+") as f:
         lines = f.readlines()
         if not lines:
             last_seen = "0"
@@ -27,22 +33,29 @@ def main():
         to_play = int(last_seen) + 1
         to_play = str(to_play)
         if add:
-            # lines.append(to_play)
             f.write("\n" + to_play)
             exit(0)
         opened = False
         for file in onlyfiles:
-            file_info = MediaInfo.parse(join(dir, file))
-            for track in file_info.tracks:
-                if track.track_type == "Video":
-                    if "e" + to_play.zfill(2) in file.lower():
-                        print("Opening file:")
-                        print(file)
-                        opened = True
-                        os.system("start \"\" \"" + join(dir, file) + "\"")
-                    break
+            if opened:
+                break
+            if platform.system() == 'Linux' in file:
+                filename = file.rsplit('/')[-1]
+            else:
+                filename = file.rsplit('\\')[-1]
+            if len(to_play) == 1:
+                if re.search(r'E0' + to_play, filename):
+                    opened = True
+                    print(f'Opening file {filename}')
+                    os.system("start \"\" \"" + file + "\"")
+            else:
+                if re.search(r'E' + to_play, filename):
+                    opened = True
+                    print(f'Opening file {filename}')
+                    os.system("start \"\" \"" + file + "\"")
+
         if not opened:
-            print("Could not find episode number " + to_play + "(you may have reached the end of season).")
+            print("Could not find episode number " + to_play + " (you may have reached the end of season).")
             input("Press [enter] to continue.")
         return 0
 
